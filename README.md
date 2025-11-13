@@ -15,9 +15,10 @@ $${\rm Im} \, I =  - \pi \int_V  d{x} \, \delta(q({x})) p({x}).$$
 
 which can also be rewitten as 
 
-$${\rm Re} \, I = \mathcal{P} \int \frac{dc}{c} \int_{q(x(t)) = c} dx(t)  \, \frac{p(x(t))}{|\nabla q(x(t))|},$$ 
+$${\rm Re}  (I) = \mathcal{P} \int \frac{dc}{c} \int_{q(x(t)) = c} dx(t)\frac{p(x(t))}{|\nabla q(x(t))|},
+$$
 
-$${\rm Im} \, I =  - \pi \int_{q(x(t)) = 0} dx(t)  \, \frac{p(x(t))}{|\nabla q(x(t))|}.$$
+$${\rm Im} (I) =  - \pi \int_{q(x(t)) = 0} dx(t)  \, \frac{p(x(t))}{|\nabla q(x(t))|}.$$
 
 
 We can see that for both the real and imaginary part, the integrand is concentrated near $q({x}) = 0$ which would result in major contribution of the integral. Here, we propose the following scheme.

@@ -220,7 +220,7 @@ end
 
 function subsample_check(surf::Surface2D, abs_err::Float64, i::Int)::Bool
     m = surf._mesh._triangles[i]
-    # println(m.v1, " ",m.v2," ", m.v3)
+
     v1, v2, v3 = mesh._vertices[m.v1], mesh._vertices[m.v2], mesh._vertices[m.v3]
 
     integrand1, integrand2, integrand3 = surf._values[m.v1], surf._values[m.v2], surf._values[m.v3]
@@ -278,6 +278,9 @@ norm(v::Vertex2DComplex) = sqrt(abs(v.x)^2 + abs(v.y)^2)
 
 
 function num_singular(vals::Vector{Float64})
+    """
+    check number of zeros within edges and verts
+    """
     num_zeros_vert = Int(vals[1] == 0.) + Int(vals[2] == 0.) + Int(vals[3] == 0.)
 
     num_zeros_edge = Int(vals[1] * vals[2] < 0.) + 
@@ -296,15 +299,20 @@ end
 
 
 function is_subsample(surf::Surface2D, c::Float64, i::Int, tol::Float64)
+    """
+    check if the error ε =  | Q((vi + vj)/2) - (Q(vi) + Q(vj))/2 | exceeds the threshold
+    """
     t = surf._mesh._triangles[i]
     fs  = [surf._values[t.v1], surf._values[t.v2], surf._values[t.v3]]
     ps  = [surf._mesh._vertices[t.v1], surf._mesh._vertices[t.v2], surf._mesh._vertices[t.v3]]
     vals = fs .- c 
+    #value average for each edges
     vals_avg = [(vals[2] + vals[3])/2., (vals[3] + vals[1])/2., (vals[1] + vals[2])/2.]
     
     pc = [(ps[2] + ps[3])/2., (ps[3] + ps[1])/2., (ps[1] + ps[2])/2.]
+
     vals_c = surf._Q_fn.(pc) .- c
-    dl = [norm(ps[2] - ps[3]), norm(ps[3] - ps[1]), norm(ps[1] - ps[2])]
+    # dl = [norm(ps[2] - ps[3]), norm(ps[3] - ps[1]), norm(ps[1] - ps[2])]
     
     err = abs.(vals_avg .- vals_c)
 
@@ -315,6 +323,9 @@ function level_set_subsample!(surf::Surface,
                                 c::Float64, 
                                 depth::Int, 
                                 tol::Float64)::Vector{Int}
+    """
+    Subsampling the mesh until we get the level set
+    """
     idxs = 1:length(surf._mesh._triangles) 
     idx_keep = []
     idx_new = []
@@ -346,6 +357,9 @@ end
 
 
 function get_gradient(surf::Surface, i::Int)
+    """
+    Finite element method for calculating |∇Q|
+    """
     t = surf._mesh._triangles[i]
     fs  = [surf._values[t.v1], surf._values[t.v2], surf._values[t.v3]]
     ps  = [surf._mesh._vertices[t.v1], surf._mesh._vertices[t.v2], surf._mesh._vertices[t.v3]]
@@ -361,6 +375,9 @@ function get_gradient(surf::Surface, i::Int)
 end
 
 function level_set(surf::Surface, c::Float64, i::Int)
+    """
+    Calculated list of edge that forms a level set for each triangle
+    """
     t = surf._mesh._triangles[i]
     fs  = [surf._values[t.v1], surf._values[t.v2], surf._values[t.v3]]
     ps  = [surf._mesh._vertices[t.v1], surf._mesh._vertices[t.v2], surf._mesh._vertices[t.v3]]
@@ -395,6 +412,9 @@ end
 
 
 function level_set(surf::Surface, c::Float64, idxs::Vector{Int}, tol::Float64)::Vector{Edge}
+    """
+    Calculated list of edge that forms a level set for the whole mesh
+    """
     level_set_edges = []
         
     for i in idxs
@@ -411,7 +431,9 @@ function level_set(surf::Surface, c::Float64, idxs::Vector{Int}, tol::Float64)::
 end
 
 function level_set!(surf::Surface, c::Float64, depth::Int, tol::Float64)::Vector{Edge}
-    
+    """
+    Calculated list of edge that forms a level set for the whole mesh
+    """
     idxs = level_set_subsample!(surf, c, depth, tol)
 
     level_set_edges = level_set(surf, c, idxs, tol)
@@ -425,13 +447,10 @@ conj(v::Vertex2DComplex) = Vertex2DComplex(Base.conj(v.x), Base.conj(v.y))
 function find_zeros(p::Vertex2D, f::Any, grad::Any, η::Any ,depth::Int)::Vertex2DComplex
     # p1 s.t. find f(p1) + iη(p1) = 0.0 + 0.0im
     p1 = Vertex2DComplex(ComplexF64(p.x), ComplexF64(p.y))
-    # println("p1: ", p1, " f + i eta: ", f(p1) + 1.0im * η(p1))
     for i = 1:depth
         
         grad_vec = grad(p1) 
-        # println("grad: ", grad_vec)
         p1 -= (f(p1) + 1.0im *η(p1))/norm(grad_vec)^2 * conj(grad_vec) 
-        # println("p1: ", p1, " f + i eta: ", f(p1) + 1.0im * η(p1))
     end
 
     return p1
@@ -523,9 +542,6 @@ function integrate1D(e::Edge, grad::Any, f::Any, depth::Int, tol::Float64)
     # println("This should be called")
     vl, vr = e.p1, e.p2
 
-
-    # x2p(x::Float64)::Vertex = interp(vl, vr, 1.0 - x)
-
     norm_analytic(g::Vertex)::Union{ComplexF64, Float64} = sqrt((g.x)^2 + (g.y)^2) 
 
     f_grad(x) = f(x)/norm_analytic(grad(x))
@@ -549,6 +565,9 @@ function integrate_delta(p_fn::Any, q_fn::Any, domain::Mesh2D;
                         depth_int = 6,
                         tol_LS = 1e-9, 
                         tol_int = 1e-9)
+    """
+    Calculate ∫dx P(x)δ(Q(x))
+    """
 
     surf = Surface2D(copy(domain), q_fn)
     level_set_subsample!(surf, 0., depth_LS, tol_LS)
@@ -1048,7 +1067,7 @@ function green_test_complex()
 
 end
 
-#TODO: edge case where there is no level set in real 
+#   TODO: edge case where there is no level set in real 
 #   plane but there are some in the complex plane
 function green_test_complex2()
     function ε_k(v)
